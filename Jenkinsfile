@@ -68,5 +68,6 @@ node {
     stage('Cleanup') {
         echo "Cleaning up..."
         sh "docker logout"
+        echo "Deploy success..."
     }    
 }
