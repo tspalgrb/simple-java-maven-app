@@ -1,6 +1,6 @@
 node {
     def awsInstanceIP = env.AWS_EC2_IP
-    def appName = env.APP_NAME
+    def appName = env.APP_NAME_JAVA
     def dockerImagePush = "${env.DOCKER_HUB_USERNAME}/${appName}:latest"
     def dockerImage = docker.image('maven:3.9.2-amazoncorretto-17')
 
@@ -32,24 +32,20 @@ node {
             sh './jenkins/scripts/deliver.sh'
             echo 'Waiting for 60 seconds...'
             sleep(60)
-            input message: 'Lanjutkan ke tahap Deploy to AWS EC2? (Klik "Proceed" untuk melanjutkan ke tahap Deploy to AWS EC2)'
         }
 
     }
 
-    stage('Build & Push Docker Image') {
-        echo 'Building docker image...' 
+    stage('Deploy EC2') {
+        echo 'Deploying application...'
+        echo 'Build & push docker image...'
         sh "docker build -t ${dockerImagePush} ."
-        echo 'Push docker image to docker hub...' 
         withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
             sh """
             echo ${env.DOCKER_PASSWORD} | docker login -u ${env.DOCKER_USER} --password-stdin
             docker push ${dockerImagePush}
             """
-        } 
-    }
-
-    stage('Deploy to AWS EC2') {
+        }
         sshagent(['ec2-ssh-key']) {
             sh """
                 ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY_PATH} ${env.SSH_USER}@${awsInstanceIP} \"
@@ -61,13 +57,8 @@ node {
                 docker logs ${appName}
                 \"
             """
-        sleep(60)
         }
-    }
-
-    stage('Cleanup') {
-        echo "Cleaning up..."
         sh "docker logout"
-        echo "Deploy success..."
-    }    
+        sleep(60)
+    }
 }
