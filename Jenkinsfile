@@ -49,6 +49,7 @@ node {
         sshagent(['ec2-ssh-key']) {
             sh """
                 ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY_PATH} ${env.SSH_USER}@${awsInstanceIP} \"
+                hostnamectl
                 docker pull ${dockerImagePush}
                 docker stop ${appName} || true
                 docker rm -f ${appName} || true
